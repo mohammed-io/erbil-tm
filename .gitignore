@@ -6,3 +6,5 @@ dist-ssr
 ui-debug.log
 .env.*
 .env
+firebase-debug.log
+firestore-debug.log
