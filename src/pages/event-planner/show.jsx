@@ -1,4 +1,5 @@
-import { debounce } from "lodash";
+import { setDoc } from "firebase/firestore";
+import { debounce, join } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
@@ -22,7 +23,7 @@ export function Show() {
   const { id } = useParams();
   const [template, loading, error] = useFirebaseDocument("public/event_planner/templates", id);
 
-  const { register, handleSubmit, control, watch, getValues } = useForm({
+  const { register, handleSubmit, control, setValue, getValues } = useForm({
     defaultValues: {
       title: '',
       body: ''
@@ -35,6 +36,14 @@ export function Show() {
   const mergeVariableValues = useCallback((values) => {
     setVariableValues(prev => ({ ...prev, ...values }))
   }, [])
+
+  useEffect(() => {
+    if (!template || !template.exists()) return;
+
+    setValue('title', template.data().title)
+    setValue('body', template.data().body)
+
+  }, [JSON.stringify(template)])
 
   useEffect(() => {
     setVariableValues(
@@ -51,11 +60,13 @@ export function Show() {
     )
   }, 200), [])
 
+  const onSubmit = useCallback((data) => {
+    setDoc(template.ref, data)
+  }, [template])
+
   if (loading) return <Loading />
 
   if (error) return <div>Error: {error}</div>
-
-  const onSubmit = (data) => console.log(data, getValues('body'))
 
   return (
     <div>
@@ -63,6 +74,18 @@ export function Show() {
         <div className="space-y-2">
           <div>
             <form action="" onSubmit={handleSubmit(onSubmit)}>
+              <div className="p-2 flex justify-end">
+                <div className="">
+                  <button
+                    className="bg-blue-500 px-5 rounded-lg py-2 
+                  font-bold uppercase text-white
+                  text-sm
+                  transition-colors
+                  hover:bg-blue-600
+                  disabled:ring-0
+                  outline-none focus:ring active:focus:ring-blue-500">Save</button>
+                </div>
+              </div>
               <fieldset className="space-y-2">
                 <div>
                   <label htmlFor="title" className="font-bold text-sm p-2">
@@ -124,7 +147,7 @@ function VariablesInputs({ variables = {}, onChange }) {
   }, [])
 
   return (
-    <div>
+    <div className="min-h-[10rem]">
       <form className="space-y-2" action="">
         {!Object.keys(variables).length && <div className="text-sm">No variables found</div>}
         {Object.entries(variables).map(([variable, value], i) => (
